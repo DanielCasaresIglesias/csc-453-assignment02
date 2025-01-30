@@ -350,7 +350,7 @@ tid_t lwp_wait(int *status) {
     while (1) {
         // If there are terminated threads, unblock and process
         if (current_sched->qlen() > 1) {
-            lwp_exit_blocked(waiting_queue);  // Custom function to handle the blocked thread waking up
+            lwp_exit_blocked(&waiting_queue);  // Custom function to handle the blocked thread waking up
         }
     }
 }
