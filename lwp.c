@@ -20,8 +20,78 @@ typedef struct thread_queue {
     int size;         // Current size of the queue
 } thread_queue;
 
+int queue_empty(thread_queue *queue) {
+    return (queue == NULL || queue->size == 0);
+}
+
 // Initialize the waiting queue
 thread_queue waiting_queue = {NULL, 0, 0, MAX_QUEUE_SIZE, 0};
+
+typedef struct thread_node {
+    thread t;
+    struct thread_node *next, *prev;
+} thread_node;
+
+static thread_node *head = NULL; // Circular queue head
+static int queue_length = 0;
+
+// Round Robin Scheduler Functions
+void rr_admit(thread new) {
+    thread_node *node = malloc(sizeof(thread_node));
+    if (!node) return;
+    node->t = new;
+    
+    if (!head) {  // First thread
+        node->next = node->prev = node;
+        head = node;
+    } else {  // Insert at end
+        thread_node *tail = head->prev;
+        tail->next = node;
+        node->prev = tail;
+        node->next = head;
+        head->prev = node;
+    }
+    queue_length++;
+}
+
+
+void rr_remove(thread victim) {
+    if (!head) return;
+
+    thread_node *current = head;
+    do {
+        if (current->t == victim) {
+            if (current == head && current->next == head) {
+                head = NULL;  // Only one thread in the queue
+            } else {
+                current->prev->next = current->next;
+                current->next->prev = current->prev;
+                if (head == current) head = current->next;
+            }
+            free(current);
+            queue_length--;
+            return;
+        }
+        current = current->next;
+    } while (current != head);
+}
+
+
+thread rr_next(void) {
+    if (!head) return NULL;
+    head = head->next; // Move to the next thread in the queue
+    return head->t;
+}
+
+
+int rr_qlen(void) {
+    return queue_length;
+}
+
+
+struct scheduler rr_publish = {NULL, NULL, rr_admit, rr_remove, rr_next, rr_qlen};
+scheduler RoundRobin = &rr_publish;
+
 
 // Add a thread to the waiting queue
 void enqueue(thread t) {
@@ -120,6 +190,9 @@ tid_t lwp_create(lwpfun function, void *argument) {
 
     // The final cleanup in the wrapper will handle calling the function and exiting
     // Admit the new thread to the scheduler
+    if (current_sched) {
+        current_sched->admit(new_thread);
+    }
     return new_thread->tid;
 }
 
@@ -211,6 +284,21 @@ void lwp_exit(int exitval) {
     }
 }
 
+
+// Handles waking up blocked threads when a thread exits
+void lwp_exit_blocked(thread_queue *waiting_queue) {
+    if (waiting_queue == NULL || queue_empty(waiting_queue)) {
+        return;  // No blocked threads to wake up
+    }
+
+    // Dequeue the first blocked thread
+    thread unblocked_thread = dequeue();
+    if (unblocked_thread != NULL) {
+        current_sched->admit(unblocked_thread);  // Re-add it to the scheduler
+    }
+}
+
+
 // Waits for a thread to terminate
 tid_t lwp_wait(int *status) {
     // Check if there are terminated threads in the scheduler
@@ -299,7 +387,7 @@ thread tid2thread(tid_t tid) {
 void lwp_set_scheduler(scheduler sched) {
     if (sched == NULL) {
         // If NULL, reset to round-robin scheduler
-        current_sched = round_robin_scheduler();  // Assuming this function returns the round-robin scheduler
+        current_sched = RoundRobin; 
         return;
     }
 
