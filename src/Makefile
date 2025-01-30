@@ -1,13 +1,15 @@
 # Compiler settings
 CC = gcc
 CFLAGS = -Wall -g -fPIC  # -fPIC for position-independent code
-# LDFLAGS = -shared  # Shared library flag
+LDFLAGS = -shared  # Shared library flag
+LIBS = -lncurses  # Link with ncurses (no need for libsnakes or libPLN if they are not separate)
+INCLUDES = -I.  # Include current directory
 
 # Source files for the library
-SRCS = lwp.c magic64.S
+SRCS = magic64.S lwp.c
 
 # Object files generated from the source files
-OBJS = $(SRCS:.c=.o) magic64.o
+OBJS = $(SRCS:.c=.o) $(SRCS:.S=.o)
 
 # Library name
 LIB_NAME = liblwp.so
@@ -17,11 +19,15 @@ all: $(LIB_NAME)
 
 # Rule to build the shared library
 $(LIB_NAME): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $(LIB_NAME)
+	$(CC) $(CFLAGS) $(OBJS) -o $(LIB_NAME) $(LDFLAGS) $(LIBS)
 
 # Rule to compile magic64.S into object file using gcc
 magic64.o: magic64.S
-	$(CC) -o magic64.o -c magic64.S
+	$(CC) $(CFLAGS) $(INCLUDES) -c magic64.S -o magic64.o
+
+# Rule to compile lwp.c into object file
+lwp.o: lwp.c
+	$(CC) $(CFLAGS) $(INCLUDES) -c lwp.c -o lwp.o
 
 # Clean up generated files
 clean:
