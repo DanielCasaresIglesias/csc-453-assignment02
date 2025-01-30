@@ -16,16 +16,16 @@ EXEC = hungrymain snakemain numbersmain
 all: $(EXEC)
 
 # Rule for building hungry snake demo
-hungrymain: hungrymain.c $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ $(LIBS) $(LDFLAGS)
+hungrymain: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(DEMOS_PATH)/hungrymain.c $^ $(LIBS) $(LDFLAGS)
 
 # Rule for building wandering snake demo
-snakemain: snakemain.c $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ $(LIBS) $(LDFLAGS)
+snakemain: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(DEMOS_PATH)/snakemain.c $^ $(LIBS) $(LDFLAGS)
 
 # Rule for building indented numbers demo
-numbersmain: numbersmain.c $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ $(LIBS) $(LDFLAGS)
+numbersmain: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(DEMOS_PATH)/numbersmain.c $^ $(LIBS) $(LDFLAGS)
 
 # Rule to build object files from source
 magic64.o: magic64.S
