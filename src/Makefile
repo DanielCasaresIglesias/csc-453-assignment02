@@ -6,12 +6,12 @@ HARDEN=-D_FORTIFY_SOURCE
 CFLAGS=-Wall -g -std=c89 -pedantic $(SUS3) $(HARDEN) -m32
 LDFLAGS=-m32
 
-ALL=liblwp.a
+ALL=liblwp.so
 
 all:	$(ALL)
 
-liblwp.a: lwp.o
-	ar r liblwp.a lwp.o
+liblwp.so: lwp.o magic64.o
+	$(CC) $(LDFLAGS) -shared -o $@ $^ -lncurses
 
 lwp.o: lwp.c lwp.h
 	$(CC) $(CFLAGS) -c $<
