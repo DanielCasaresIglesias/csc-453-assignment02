@@ -89,7 +89,9 @@ int rr_qlen(void) {
 }
 
 
-struct scheduler rr_publish = {NULL, NULL, rr_admit, rr_remove, rr_next, rr_qlen};
+struct scheduler rr_publish = {
+    NULL, NULL, rr_admit, rr_remove, rr_next, rr_qlen
+};
 scheduler RoundRobin = &rr_publish;
 
 
@@ -186,9 +188,9 @@ tid_t lwp_create(lwpfun function, void *argument) {
     new_thread->state.rsp = (unsigned long) stack_top;
     new_thread->state.rdi = (unsigned long) function;  // First argument
     new_thread->state.rsi = (unsigned long) argument;  // Second argument
-    new_thread->state.rbp = 0;  // Clear base pointer (no local variables for now) TODO
+    new_thread->state.rbp = 0;  // Clear base pointer
 
-    // The final cleanup in the wrapper will handle calling the function and exiting
+    // Final cleanup in the wrapper will handle calling the function & exiting
     // Admit the new thread to the scheduler
     if (current_sched) {
         current_sched->admit(new_thread);
@@ -214,16 +216,16 @@ void lwp_start(void) {
 
     // Set up the context as if this thread had just been created
     // The return address should go to lwp_exit() when the thread finishes
-    unsigned long *stack_top = (unsigned long *)(current->state.rsp); // Use the current stack pointer
+    unsigned long *stack_top = (unsigned long *)(current->state.rsp);
 
-    // Set up a fake return address (this will be where the thread "returns" when finished)
+    // Set up a fake return address
     stack_top--;  // Space for return address
-    *stack_top = (unsigned long) lwp_exit;  // Fake return address (exit when done)
+    *stack_top = (unsigned long) lwp_exit;  // Fake return address
 
     // Update the stack pointer in the context
     current->state.rsp = (unsigned long)stack_top;
 
-    // Set up the thread's registers (using rdi and rsi for the function and argument)
+    // Set up the thread's registers
     current->state.rdi = 0;  // No function argument
     current->state.rsi = 0;  // No additional argument
 
@@ -235,7 +237,7 @@ void lwp_start(void) {
         current_sched->admit(current);
     }
 
-    // Yield control to the scheduler (this function will return when the scheduler decides)
+    // Yield control to the scheduler
     lwp_yield();
 }
 
@@ -250,7 +252,7 @@ void lwp_yield(void) {
     // Step 1: Save the current thread's context
     if (current_thread != NULL) {
         // Save the current thread's context (i.e., registers, stack pointer)
-        swap_rfiles(&current_thread->state, NULL);  // Save current thread's state
+        swap_rfiles(&current_thread->state, NULL);
     }
 
     // Step 2: Pick the next thread from the scheduler
@@ -261,23 +263,23 @@ void lwp_yield(void) {
     }
 
     // Step 3: Restore the next thread's context
-    current_thread = next_thread;  // Set the current thread to the next thread
-    swap_rfiles(NULL, &current_thread->state);  // Restore the next thread's state
-
-    // The next thread will start executing from its saved state and resume its function
+    current_thread = next_thread;
+    swap_rfiles(NULL, &current_thread->state);
 }
 
 // Exits the current LWP
 void lwp_exit(int exitval) {
     /*
-       Terminates the calling thread. The exit value's low 8 bits are combined with the
-       terminated status to create a termination status. The thread will yield control to the
-       next runnable thread. The thread's resources will be deallocated when it's waited for.
+       Terminates the calling thread. The exit value's low 8 bits are combined
+       with the terminated status to create a termination status. The thread
+       will yield control to the next runnable thread. The thread's resources
+       will be deallocated when it's waited for.
     */
     
     if (current_thread != NULL) {
-        // Set the thread's status to terminated, using MKTERMSTAT to combine the status and exit code
-        current_thread->status = MKTERMSTAT(LWP_TERM, exitval & 0xFF);  // Use only the low 8 bits
+        // Set the thread's status to terminated, using MKTERMSTAT to combine
+        // the status and exit code
+        current_thread->status = MKTERMSTAT(LWP_TERM, exitval & 0xFF);
 
         // Step 1: Yield control to the next thread
         lwp_yield();
@@ -305,14 +307,16 @@ tid_t lwp_wait(int *status) {
     if (current_sched->qlen() > 1) {
         // Find the oldest terminated thread (FIFO order)
         thread terminated_thread = NULL;
-        thread temp_thread = current_sched->next();  // Assuming next() gives the next thread in the scheduler
+          // Assuming next() gives the next thread in the scheduler
+        thread temp_thread = current_sched->next();
 
         while (temp_thread != NULL) {
             if (temp_thread->status == LWP_TERM) {
                 terminated_thread = temp_thread;
                 break;  // Get the oldest terminated thread (FIFO)
             }
-            temp_thread = temp_thread->sched_one;  // Traverse through the scheduler's linked list of threads
+            // Traverse through the scheduler's linked list of threads
+            temp_thread = temp_thread->sched_one;
         }
 
         if (terminated_thread != NULL) {
@@ -321,8 +325,10 @@ tid_t lwp_wait(int *status) {
                 *status = LWPTERMSTAT(terminated_thread->status);
             }
 
-            // Deallocate resources associated with the terminated thread, but don't free the stack of the system thread
-            if (terminated_thread->tid != 1) {  // Assuming tid 1 is the system thread
+            // Deallocate resources associated with the terminated thread, but
+            // don't free the stack of the system thread
+            // Assuming tid 1 is the system thread
+            if (terminated_thread->tid != 1) {
                 free(terminated_thread->stack);
             }
 
@@ -341,16 +347,16 @@ tid_t lwp_wait(int *status) {
     }
 
     // Block the current thread (remove it from the scheduler)
-    current_sched->remove(current_thread);  // Remove current thread from scheduler
+    current_sched->remove(current_thread);
 
     // Add it to the waiting queue
-    enqueue(current_thread);  // Assuming a queue is used to store blocked threads
+    enqueue(current_thread);
 
     // Block until another thread exits
     while (1) {
         // If there are terminated threads, unblock and process
         if (current_sched->qlen() > 1) {
-            lwp_exit_blocked(&waiting_queue);  // Custom function to handle the blocked thread waking up
+            lwp_exit_blocked(&waiting_queue);
         }
     }
 }
@@ -369,14 +375,16 @@ tid_t lwp_gettid(void) {
 
 // Converts tid to thread structure
 thread tid2thread(tid_t tid) {
-    thread temp_thread = current_sched->next();  // Start with the first thread in the scheduler
+    // Start with the first thread in the scheduler
+    thread temp_thread = current_sched->next();
     
     // Iterate through the scheduler to find the thread with the matching tid
     while (temp_thread != NULL) {
         if (temp_thread->tid == tid) {
             return temp_thread;  // Return the thread if the tid matches
         }
-        temp_thread = temp_thread->sched_one;  // Move to the next thread in the scheduler
+        // Move to the next thread in the scheduler
+        temp_thread = temp_thread->sched_one;
     }
     
     return NULL;  // Return NULL if no matching thread is found
@@ -394,10 +402,14 @@ void lwp_set_scheduler(scheduler sched) {
     // Otherwise, transfer all threads to the new scheduler
     thread temp_thread = current_sched->next();  // Get the first thread
     while (temp_thread != NULL) {
-        scheduler old_sched = current_sched;  // Store the old scheduler for removal
-        current_sched->remove(temp_thread);   // Remove the thread from the old scheduler
-        sched->admit(temp_thread);            // Add it to the new scheduler
-        temp_thread = old_sched->next();      // Move to the next thread
+        // Store the old scheduler for removal
+        scheduler old_sched = current_sched;
+        // Remove the thread from the old scheduler
+        current_sched->remove(temp_thread);
+        // Add it to the new scheduler
+        sched->admit(temp_thread);
+        // Move to the next thread
+        temp_thread = old_sched->next();
     }
 
     // Now set the current scheduler to the new scheduler
