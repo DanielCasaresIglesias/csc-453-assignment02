@@ -4,7 +4,7 @@ CFLAGS = -Wall -g -fPIC  # -fPIC for position-independent code
 LDFLAGS = -shared  # Shared library flag
 
 # Source files for the library
-SRCS = lwp.c src/magic64.S
+SRCS = lwp.c magic64.S
 
 # Object files generated from the source files
 OBJS = $(SRCS:.c=.o) magic64.o
