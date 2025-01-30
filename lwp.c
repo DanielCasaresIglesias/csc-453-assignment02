@@ -212,7 +212,7 @@ void lwp_exit(int exitval) {
 }
 
 // Waits for a thread to terminate
-void lwp_wait(int *status) {
+tid_t lwp_wait(int *status) {
     // Check if there are terminated threads in the scheduler
     if (current_sched->qlen() > 1) {
         // Find the oldest terminated thread (FIFO order)
