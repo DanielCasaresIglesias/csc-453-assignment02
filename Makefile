@@ -4,7 +4,7 @@ LDFLAGS = -lncurses
 LIBS = -L. -lPLN -lsnakes
 
 # Source files
-SRCS = lwp.c magic64.S
+SRCS = lwp.c $(HOME)/pn-cs453/Given/Asgn2/src/magic64.S
 
 # Object files
 OBJS = $(SRCS:.c=.o) magic64.o
