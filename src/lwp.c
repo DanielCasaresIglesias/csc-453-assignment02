@@ -27,6 +27,7 @@ int queue_empty(thread_queue *queue) {
 // Initialize the waiting queue
 thread_queue waiting_queue = {NULL, 0, 0, MAX_QUEUE_SIZE, 0};
 
+
 typedef struct thread_node {
     thread t;
     struct thread_node *next, *prev;
@@ -97,6 +98,12 @@ scheduler RoundRobin = &rr_publish;
 
 // Add a thread to the waiting queue
 void enqueue(thread t) {
+    if (!waiting_queue.threads) {
+        waiting_queue.threads =  malloc(MAX_QUEUE_SIZE * sizeof(thread));
+        if (!waiting_queue.threads) {
+            return;
+        }
+    }
     if (waiting_queue.size < waiting_queue.capacity) {
         waiting_queue.threads[waiting_queue.rear] = t;
         waiting_queue.rear = (waiting_queue.rear + 1) % waiting_queue.capacity;
@@ -198,6 +205,32 @@ tid_t lwp_create(lwpfun function, void *argument) {
     return new_thread->tid;
 }
 
+// Yields control to another LWP
+void lwp_yield(void) {
+    /*
+       Yields control to another thread, saving the current thread's context,
+       selecting the next thread from the scheduler, restoring its context,
+       and returning to it. If no next thread is available, the program exits.
+    */
+
+    // Step 1: Save the current thread's context
+    if (current_thread != NULL) {
+        // Save the current thread's context (i.e., registers, stack pointer)
+        swap_rfiles(&current_thread->state, NULL);
+    }
+
+    // Step 2: Pick the next thread from the scheduler
+    thread next_thread = current_sched->next();
+    if (next_thread == NULL) {
+        // No threads to run, so terminate the program
+        exit(3);
+    }
+
+    // Step 3: Restore the next thread's context
+    current_thread = next_thread;
+    swap_rfiles(NULL, &current_thread->state);
+}
+
 // Starts the LWP system
 void lwp_start(void) {
     /*
@@ -208,7 +241,11 @@ void lwp_start(void) {
 
     // Check if we're already in a valid state (if not, exit)
     if (current_thread == NULL) {
-        return;
+        // Initialize current thread if NULL
+        current_thread = malloc(sizeof(struct threadinfo_st));
+        if (!current_thread) {
+            return;
+        }
     }
 
     // Create context for the calling thread without allocating a new stack
@@ -241,32 +278,6 @@ void lwp_start(void) {
     lwp_yield();
 }
 
-// Yields control to another LWP
-void lwp_yield(void) {
-    /*
-       Yields control to another thread, saving the current thread's context,
-       selecting the next thread from the scheduler, restoring its context,
-       and returning to it. If no next thread is available, the program exits.
-    */
-
-    // Step 1: Save the current thread's context
-    if (current_thread != NULL) {
-        // Save the current thread's context (i.e., registers, stack pointer)
-        swap_rfiles(&current_thread->state, NULL);
-    }
-
-    // Step 2: Pick the next thread from the scheduler
-    thread next_thread = current_sched->next();
-    if (next_thread == NULL) {
-        // No threads to run, so terminate the program
-        exit(3);
-    }
-
-    // Step 3: Restore the next thread's context
-    current_thread = next_thread;
-    swap_rfiles(NULL, &current_thread->state);
-}
-
 // Exits the current LWP
 void lwp_exit(int exitval) {
     /*
@@ -280,6 +291,7 @@ void lwp_exit(int exitval) {
         // Set the thread's status to terminated, using MKTERMSTAT to combine
         // the status and exit code
         current_thread->status = MKTERMSTAT(LWP_TERM, exitval & 0xFF);
+        current_sched->remove(current_thread);
 
         // Step 1: Yield control to the next thread
         lwp_yield();
