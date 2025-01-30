@@ -1,36 +1,36 @@
+# Compiler settings
 CC = gcc
-CFLAGS = -Wall -g
-LDFLAGS = -lncurses
-LIBS = -L. -lPLN -lsnakes
+CFLAGS = -Wall -g -fPIC  # -fPIC for position-independent code
+LDFLAGS = -shared  # Shared library flag
 
-# Source files
-SRCS = lwp.c ~pn-cs453/Given/Asgn2/src/magic64.S
+# Source files for the library
+SRCS = lwp.c magic64.S
 
-# Object files
+# Object files generated from the source files
 OBJS = $(SRCS:.c=.o) magic64.o
 
-# Executable files
-EXEC = hungrymain snakemain numbersmain
+# Library name
+LIB_NAME = liblwp.so
 
-# Build the executables
-all: $(EXEC)
+# Build the library
+all: $(LIB_NAME)
 
-# Rule for building hungry snake demo
-hungrymain: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(DEMOS_PATH)/hungrymain.c $^ $(LIBS) $(LDFLAGS)
+# Rule to build the shared library
+$(LIB_NAME): $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) -o $(LIB_NAME) $(LDFLAGS)
 
-# Rule for building wandering snake demo
-snakemain: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(DEMOS_PATH)/snakemain.c $^ $(LIBS) $(LDFLAGS)
+# Rule to compile magic64.S into object file using gcc
+magic64.o: magic64.S
+	$(CC) -o magic64.o -c magic64.S
 
-# Rule for building indented numbers demo
-numbersmain: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(DEMOS_PATH)/numbersmain.c $^ $(LIBS) $(LDFLAGS)
-
-# Rule to build object files from source
-magic64.o: ~pn-cs453/Given/Asgn2/src/magic64.S
-	as -o $@ $^
-
-# Clean up object files and executables
+# Clean up generated files
 clean:
-	rm -f $(OBJS) $(EXEC)
+	rm -f $(OBJS) $(LIB_NAME)
+
+# Install the shared library (optional, modify the path if necessary)
+install: $(LIB_NAME)
+	cp $(LIB_NAME) /usr/local/lib/
+
+# Rule to test the build (optional, for convenience)
+test: $(LIB_NAME)
+	@echo "Library $(LIB_NAME) built successfully."
