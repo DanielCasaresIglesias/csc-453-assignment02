@@ -144,10 +144,10 @@ void lwp_wrapper(lwpfun function, void *argument) {
 tid_t lwp_create(lwpfun function, void *argument) {
     /*
        Creates a new thread and admits it to the current scheduler. The
-       thread’s resources will consist of a context and stack, both initialized
-       so that when the scheduler chooses this thread and its context is loaded
-       via swap rfiles) it will run the given function. This may be called by
-       any thread.
+       thread’s resources will consist of a context and stack, both
+       initialized so that when the scheduler chooses this thread and its
+       context is loaded via swap rfiles) it will run the given function. This
+       may be called by any thread.
     */
 
     if (!function) {
