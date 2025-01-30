@@ -1,7 +1,7 @@
 # Compiler settings
 CC = gcc
 CFLAGS = -Wall -g -fPIC  # -fPIC for position-independent code
-LDFLAGS = -shared  # Shared library flag
+# LDFLAGS = -shared  # Shared library flag
 
 # Source files for the library
 SRCS = lwp.c magic64.S
@@ -17,7 +17,7 @@ all: $(LIB_NAME)
 
 # Rule to build the shared library
 $(LIB_NAME): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $(LIB_NAME) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(OBJS) -o $(LIB_NAME)
 
 # Rule to compile magic64.S into object file using gcc
 magic64.o: magic64.S
