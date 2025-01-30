@@ -108,7 +108,7 @@ void enqueue(thread t) {
 thread dequeue(void) {
     if (waiting_queue.size > 0) {
         thread t = waiting_queue.threads[waiting_queue.front];
-        waiting_queue.front = (waiting_queue.front + 1) % waiting_queue.capacity;
+        waiting_queue.front = (waiting_queue.front + 1)%waiting_queue.capacity;
         waiting_queue.size--;
         return t;
     }
